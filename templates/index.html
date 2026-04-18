@@ -130,13 +130,42 @@
 
     /* ── Layout ── */
     .workspace { display: flex; flex: 1; overflow: hidden; }
-    #map { flex: 1; }
+    #map { flex: 1; min-height: 220px; }
 
     /* ── Side panel ── */
     .side {
       width: 380px; flex-shrink: 0;
       background: var(--panel); border-left: 1px solid var(--border);
       display: flex; flex-direction: column; overflow-y: auto;
+    }
+
+    /* ── Mobile portrait ── */
+    @media (max-width: 600px) {
+      header { padding: 0 12px; }
+      .logo-sub { display: none; }
+      .btn-how { padding: 5px 10px; font-size: 11px; margin-right: 6px; }
+      .data-badge { font-size: 10px; padding: 3px 8px; }
+
+      .workspace { flex-direction: column; }
+      #map { height: 42vh; flex: none; }
+
+      .side {
+        width: 100%; border-left: none;
+        border-top: 1px solid var(--border);
+        flex: 1; overflow-y: auto;
+      }
+
+      .form-section { padding: 12px; }
+      .results-section { padding: 12px; }
+
+      .score-number { font-size: 38px; }
+      .premium-main { font-size: 22px; }
+
+      .ex-flow { gap: 4px; }
+      .ex-flow-step { padding: 6px 8px; font-size: 11px; }
+
+      .modal { max-height: 92vh; border-radius: 10px 10px 0 0; }
+      .modal-overlay { align-items: flex-end; }
     }
 
     /* ── Form ── */
