@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: warisk
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: ACLED_EMAIL
+        sync: false
+      - key: ACLED_KEY
+        sync: false
