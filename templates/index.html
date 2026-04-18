@@ -45,6 +45,89 @@
       border: 1px solid {% if has_live_data %}rgba(34,197,94,0.3){% else %}rgba(245,158,11,0.3){% endif %};
     }
 
+    /* ── How It Works button ── */
+    .btn-how {
+      font-size: 12px; padding: 5px 14px; border-radius: 20px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); cursor: pointer; transition: all 0.15s;
+      margin-right: 10px;
+    }
+    .btn-how:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; width: 660px; max-width: 95vw;
+      max-height: 88vh; overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--panel); z-index: 1;
+    }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 24px; }
+
+    /* ── Explainer sections ── */
+    .ex-step {
+      display: flex; gap: 16px; margin-bottom: 28px;
+    }
+    .ex-num {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.3);
+      color: var(--accent); font-size: 13px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ex-content { flex: 1; }
+    .ex-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .ex-text  { font-size: 13px; line-height: 1.7; color: #94a3b8; }
+    .ex-text strong { color: var(--text); }
+
+    .ex-divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+
+    .ex-callout {
+      background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 10px; padding: 16px; margin-bottom: 24px;
+    }
+    .ex-callout-title { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+    .ex-callout-text  { font-size: 13px; line-height: 1.7; color: #94a3b8; }
+    .ex-callout-text strong { color: var(--text); }
+
+    .ex-flow {
+      display: flex; align-items: center; gap: 6px;
+      flex-wrap: wrap; margin: 16px 0;
+    }
+    .ex-flow-step {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px;
+      font-size: 12px; font-weight: 600; color: var(--text);
+      text-align: center;
+    }
+    .ex-flow-arrow { color: var(--muted); font-size: 14px; }
+
+    .ex-bottom {
+      background: rgba(255,107,53,0.07); border: 1px solid rgba(255,107,53,0.2);
+      border-radius: 10px; padding: 16px;
+    }
+    .ex-bottom-title { font-size: 12px; font-weight: 700; color: var(--accent2); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+    .ex-bottom-text   { font-size: 13px; line-height: 1.7; color: #94a3b8; }
+    .ex-bottom-text strong { color: var(--text); }
+
     /* ── Layout ── */
     .workspace { display: flex; flex: 1; overflow: hidden; }
     #map { flex: 1; }
@@ -177,10 +260,131 @@
       <span class="logo-sub">Global War-Risk Intelligence</span>
     </div>
   </div>
-  <span class="data-badge">
-    {% if has_live_data %}● ACLED Live Data{% else %}● Sample Dataset{% endif %}
-  </span>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button class="btn-how" onclick="openModal()">How It Works</button>
+    <span class="data-badge">
+      {% if has_live_data %}● ACLED Live Data{% else %}● Sample Dataset{% endif %}
+    </span>
+  </div>
 </header>
+
+<!-- ── How It Works Modal ── -->
+<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">How WarRisk Works</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="ex-callout">
+        <div class="ex-callout-title">The Problem</div>
+        <div class="ex-callout-text">
+          Reconstruction companies won't enter a war zone without insurance. Banks won't lend. Investors won't commit.
+          But <strong>standard insurance excludes war by default</strong> — and the specialized war-risk market is
+          opaque, slow, and only accessible to companies with the right broker relationships.
+          The result: billions in reconstruction sits frozen while buildings stay rubble.
+        </div>
+      </div>
+
+      <div class="ex-step">
+        <div class="ex-num">1</div>
+        <div class="ex-content">
+          <div class="ex-title">The Bucket — and why it's not enough</div>
+          <div class="ex-text">
+            Insurance is a shared risk pool. Businesses pay a premium into the bucket. When something bad happens,
+            the bucket pays out. The insurer manages the bucket, prices the risk, and keeps a margin.
+            <br/><br/>
+            <strong>War risk breaks the model.</strong> One missile strike can drain the entire bucket at once.
+            Insurers can't spread that across thousands of unrelated customers the way they do for car accidents.
+            So they either refuse, charge prohibitively, or require so much paperwork that it takes months —
+            while the war keeps going.
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-step">
+        <div class="ex-num">2</div>
+        <div class="ex-content">
+          <div class="ex-title">The fix: Parametric insurance</div>
+          <div class="ex-text">
+            Traditional insurance pays out after someone proves their loss — which means sending an adjuster
+            into an active war zone, waiting months, and arguing over damage estimates.
+            <br/><br/>
+            <strong>Parametric insurance skips all of that.</strong> Instead of "prove your loss,"
+            the policy says: <em>"If satellite imagery confirms ≥25% structural damage to your asset,
+            you get paid automatically within 10 business days. No adjuster. No argument."</em>
+            <br/><br/>
+            The trigger is agreed upfront. When it fires, money moves. That's it.
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-step">
+        <div class="ex-num">3</div>
+        <div class="ex-content">
+          <div class="ex-title">Where WarRisk fits — the intelligence layer</div>
+          <div class="ex-text">
+            <strong>WarRisk doesn't hold the bucket.</strong> That's still the insurer — Lloyd's syndicates,
+            reinsurers, government-backed facilities. WarRisk is the brain that makes the bucket functional
+            in places it was too scared to go before.
+          </div>
+          <div class="ex-flow">
+            <div class="ex-flow-step">📍 Location<br/><span style="font-size:10px;color:var(--muted);font-weight:400">project coordinates</span></div>
+            <div class="ex-flow-arrow">→</div>
+            <div class="ex-flow-step">🧠 WarRisk<br/><span style="font-size:10px;color:var(--muted);font-weight:400">scores the risk</span></div>
+            <div class="ex-flow-arrow">→</div>
+            <div class="ex-flow-step">📋 Policy<br/><span style="font-size:10px;color:var(--muted);font-weight:400">insurer sets terms</span></div>
+            <div class="ex-flow-arrow">→</div>
+            <div class="ex-flow-step">👁 Monitor<br/><span style="font-size:10px;color:var(--muted);font-weight:400">continuous watch</span></div>
+            <div class="ex-flow-arrow">→</div>
+            <div class="ex-flow-step">⚡ Trigger<br/><span style="font-size:10px;color:var(--muted);font-weight:400">auto alert + payout</span></div>
+          </div>
+          <div class="ex-text" style="margin-top:10px">
+            WarRisk tells the insurer what to charge and defines the trigger terms.
+            WarRisk watches the conflict data 24/7. When the threshold is crossed, WarRisk fires the alert to
+            <strong>both sides simultaneously</strong> — the insured knows they're getting paid,
+            the insurer knows exactly why, and there's a full data package to back it up.
+            No surprises. No disputes.
+          </div>
+        </div>
+      </div>
+
+      <div class="ex-step">
+        <div class="ex-num">4</div>
+        <div class="ex-content">
+          <div class="ex-title">Why global — and why now</div>
+          <div class="ex-text">
+            Conflict isn't one war anymore. Ukraine. Gaza. Sudan. The Black Sea. The Gulf of Hormuz.
+            The Red Sea. Every one of these has reconstruction needs, shipping lanes, and infrastructure
+            that somebody needs insured — and nobody has built a single platform that covers all of them.
+            <br/><br/>
+            <strong>The same risk intelligence engine works everywhere.</strong>
+            The data sources are global. The parametric structure is the same.
+            The insurers at Lloyd's already cover multiple conflict zones — they just need better tools
+            to price and monitor them confidently. That's what WarRisk provides.
+          </div>
+        </div>
+      </div>
+
+      <hr class="ex-divider"/>
+
+      <div class="ex-bottom">
+        <div class="ex-bottom-title">The business model — simply</div>
+        <div class="ex-bottom-text">
+          WarRisk charges a platform fee — either a percentage of the premium it helps price,
+          or a SaaS fee from the insurer or broker using the intelligence.
+          <strong>We never hold risk capital.</strong> The bucket belongs to Lloyd's.
+          The brain belongs to WarRisk.
+          <br/><br/>
+          Think of it like the difference between owning the cars and owning the dispatch system.
+          Uber didn't need to buy a fleet. WarRisk doesn't need to be an insurance company.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <div class="workspace">
   <div id="map"></div>
@@ -440,7 +644,13 @@ function renderResults(d, lat, lon) {
 // Enter key triggers score
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter') runScore();
+  if (e.key === 'Escape') closeModal();
 });
+
+// ─── Modal ────────────────────────────────────────────────────────
+function openModal()  { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function closeModalOutside(e) { if (e.target.id === 'modal') closeModal(); }
 </script>
 </body>
 </html>
