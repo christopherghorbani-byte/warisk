@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WarRisk — Global War-Risk Intelligence</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+  <style>
+    :root {
+      --bg:        #0a0e1a;
+      --panel:     #111827;
+      --border:    #1e2d40;
+      --accent:    #00d4ff;
+      --accent2:   #ff6b35;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --low:       #22c55e;
+      --moderate:  #f59e0b;
+      --high:      #ef4444;
+      --severe:    #dc2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--panel); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; z-index: 1000;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .logo-text { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+    .logo-sub  { font-size: 11px; color: var(--muted); margin-left: 4px; }
+    .data-badge {
+      font-size: 11px; padding: 3px 10px; border-radius: 20px;
+      background: {% if has_live_data %}rgba(34,197,94,0.15){% else %}rgba(245,158,11,0.15){% endif %};
+      color: {% if has_live_data %}#22c55e{% else %}#f59e0b{% endif %};
+      border: 1px solid {% if has_live_data %}rgba(34,197,94,0.3){% else %}rgba(245,158,11,0.3){% endif %};
+    }
+
+    /* ── Layout ── */
+    .workspace { display: flex; flex: 1; overflow: hidden; }
+    #map { flex: 1; }
+
+    /* ── Side panel ── */
+    .side {
+      width: 380px; flex-shrink: 0;
+      background: var(--panel); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow-y: auto;
+    }
+
+    /* ── Form ── */
+    .form-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .section-title { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 12px; }
+
+    .form-row { margin-bottom: 10px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    select, input[type="number"], input[type="text"] {
+      width: 100%; padding: 8px 10px; border-radius: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-size: 13px; outline: none;
+    }
+    select:focus, input:focus { border-color: var(--accent); }
+
+    .coords-row { display: flex; gap: 8px; }
+    .coords-row .form-row { flex: 1; }
+
+    .hint { font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 5px; }
+    .hint-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+    .btn-score {
+      width: 100%; padding: 10px; border: none; border-radius: 8px;
+      background: var(--accent); color: #0a0e1a; font-size: 14px; font-weight: 700;
+      cursor: pointer; margin-top: 4px; transition: opacity 0.15s;
+    }
+    .btn-score:hover { opacity: 0.88; }
+    .btn-score:disabled { opacity: 0.45; cursor: default; }
+
+    /* ── Results ── */
+    .results-section { padding: 16px; flex: 1; }
+    .placeholder { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .placeholder-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+    .placeholder p { font-size: 13px; line-height: 1.6; }
+
+    /* Score card */
+    .score-card {
+      border-radius: 10px; padding: 16px;
+      background: var(--bg); border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .score-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .score-number { font-size: 48px; font-weight: 800; line-height: 1; }
+    .score-label { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+
+    .score-bar { height: 6px; border-radius: 3px; background: var(--border); margin-bottom: 14px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+    .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .score-stat { background: rgba(255,255,255,0.03); border-radius: 6px; padding: 8px 10px; }
+    .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 15px; font-weight: 700; margin-top: 2px; }
+
+    /* Premium card */
+    .premium-card {
+      border-radius: 10px; padding: 16px;
+      background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.2);
+      margin-bottom: 12px;
+    }
+    .premium-main { font-size: 28px; font-weight: 800; color: var(--accent); }
+    .premium-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .premium-usd  { font-size: 13px; color: var(--text); margin-top: 8px; }
+    .premium-usd span { font-weight: 700; color: var(--accent2); }
+
+    /* Trigger card */
+    .trigger-card {
+      border-radius: 10px; padding: 14px;
+      background: rgba(255,107,53,0.06); border: 1px solid rgba(255,107,53,0.2);
+      margin-bottom: 12px;
+    }
+    .trigger-title { font-size: 11px; font-weight: 600; color: var(--accent2); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+    .trigger-text  { font-size: 12px; line-height: 1.6; color: var(--text); }
+
+    /* Events list */
+    .events-card {
+      border-radius: 10px; padding: 14px;
+      background: var(--bg); border: 1px solid var(--border);
+    }
+    .events-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+    .event-item { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+    .event-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .event-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--high); flex-shrink: 0; margin-top: 5px; }
+    .event-info { flex: 1; min-width: 0; }
+    .event-type { font-size: 12px; font-weight: 600; }
+    .event-loc  { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-dist { font-size: 11px; color: var(--accent); flex-shrink: 0; }
+
+    /* Factor breakdown */
+    .factors-card {
+      border-radius: 10px; padding: 14px;
+      background: var(--bg); border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .factor-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .factor-label { font-size: 11px; color: var(--muted); width: 110px; flex-shrink: 0; }
+    .factor-bar-bg { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .factor-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+    .factor-val { font-size: 11px; color: var(--text); width: 28px; text-align: right; }
+
+    /* Spinner */
+    .spinner { display: none; text-align: center; padding: 30px; }
+    .spinner.active { display: block; }
+    .spin { display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Map click marker pulse */
+    .pulse-marker { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); opacity:1; } 50% { transform: scale(1.3); opacity:0.7; } }
+
+    /* Crosshair cursor on map */
+    .leaflet-container { cursor: crosshair !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <span class="logo-text">WarRisk</span>
+      <span class="logo-sub">Global War-Risk Intelligence</span>
+    </div>
+  </div>
+  <span class="data-badge">
+    {% if has_live_data %}● ACLED Live Data{% else %}● Sample Dataset{% endif %}
+  </span>
+</header>
+
+<div class="workspace">
+  <div id="map"></div>
+
+  <div class="side">
+    <div class="form-section">
+      <div class="section-title">Project Parameters</div>
+
+      <div class="coords-row">
+        <div class="form-row">
+          <label>Latitude</label>
+          <input type="number" id="lat" step="0.0001" placeholder="Click map"/>
+        </div>
+        <div class="form-row">
+          <label>Longitude</label>
+          <input type="number" id="lon" step="0.0001" placeholder="Click map"/>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Asset Type</label>
+        <select id="asset_type">
+          <option value="warehouse">Warehouse / Storage</option>
+          <option value="factory">Factory / Manufacturing</option>
+          <option value="infrastructure">Critical Infrastructure</option>
+          <option value="hospital">Hospital / Medical</option>
+          <option value="residential">Residential / Housing</option>
+          <option value="office">Office / Commercial</option>
+          <option value="port">Port / Logistics Hub</option>
+          <option value="vessel">Vessel (Marine)</option>
+          <option value="cargo">Cargo / Freight</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label>Insured Value (USD)</label>
+        <input type="number" id="insured_value" value="5000000" min="100000" step="100000"/>
+      </div>
+
+      <div class="hint"><span class="hint-dot"></span> Click anywhere on the map to set location</div>
+
+      <button class="btn-score" id="btn-score" onclick="runScore()">
+        Generate Risk Assessment
+      </button>
+    </div>
+
+    <div class="results-section" id="results">
+      <div class="placeholder">
+        <div class="placeholder-icon">🌍</div>
+        <p>Click a location on the map or enter coordinates, then generate a risk assessment.</p>
+        <br/>
+        <p style="font-size:11px; color: var(--muted);">
+          Conflict events shown are from ACLED (Armed Conflict Location &amp; Event Data).
+          Parametric triggers use satellite imagery confirmation — no adjuster needed in conflict zones.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Leaflet + plugins -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script>
+// ─── Map setup ───────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [30, 25],
+  zoom: 3,
+  zoomControl: true,
+  preferCanvas: true,
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  maxZoom: 18,
+}).addTo(map);
+
+let heatLayer = null;
+let clickMarker = null;
+let resultMarker = null;
+
+// Load heatmap
+fetch('/api/heatmap')
+  .then(r => r.json())
+  .then(pts => {
+    heatLayer = L.heatLayer(pts, {
+      radius: 22, blur: 18, maxZoom: 8,
+      gradient: { 0.2: '#ff6b35', 0.5: '#ff0000', 1.0: '#dc2626' }
+    }).addTo(map);
+  });
+
+// Click handler
+map.on('click', function(e) {
+  const { lat, lng } = e.latlng;
+  document.getElementById('lat').value = lat.toFixed(5);
+  document.getElementById('lon').value = lng.toFixed(5);
+  setClickMarker(lat, lng);
+});
+
+function setClickMarker(lat, lon) {
+  if (clickMarker) map.removeLayer(clickMarker);
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="width:14px;height:14px;background:#00d4ff;border:2px solid white;border-radius:50%;box-shadow:0 0 8px #00d4ff;"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+  clickMarker = L.marker([lat, lon], { icon }).addTo(map);
+}
+
+// ─── Scoring ─────────────────────────────────────────────────────
+async function runScore() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  if (isNaN(lat) || isNaN(lon)) {
+    alert('Click a location on the map first.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-score');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+
+  document.getElementById('results').innerHTML = `
+    <div class="spinner active"><div class="spin"></div><p style="margin-top:12px;font-size:12px;color:var(--muted)">Querying conflict database…</p></div>`;
+
+  try {
+    const res = await fetch('/api/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lat,
+        lon,
+        asset_type: document.getElementById('asset_type').value,
+        insured_value: parseFloat(document.getElementById('insured_value').value),
+      }),
+    });
+    const d = await res.json();
+    renderResults(d, lat, lon);
+  } catch (err) {
+    document.getElementById('results').innerHTML = `<div class="placeholder"><p style="color:var(--high)">Error: ${err.message}</p></div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Generate Risk Assessment';
+}
+
+function renderResults(d, lat, lon) {
+  const colors = { Low: 'var(--low)', Moderate: 'var(--moderate)', High: 'var(--high)', Severe: 'var(--severe)' };
+  const bgColors = { Low: 'rgba(34,197,94,0.12)', Moderate: 'rgba(245,158,11,0.12)', High: 'rgba(239,68,68,0.12)', Severe: 'rgba(220,38,38,0.15)' };
+  const color = colors[d.risk_label] || 'var(--muted)';
+  const bg    = bgColors[d.risk_label] || 'transparent';
+
+  // Drop result pin on map
+  if (resultMarker) map.removeLayer(resultMarker);
+  const scoreColor = d.risk_score >= 75 ? '#dc2626' : d.risk_score >= 50 ? '#ef4444' : d.risk_score >= 25 ? '#f59e0b' : '#22c55e';
+  const rIcon = L.divIcon({
+    className: '',
+    html: `<div style="background:${scoreColor};color:white;font-size:11px;font-weight:800;padding:3px 7px;border-radius:12px;border:2px solid white;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5)">${d.risk_score} ${d.risk_label}</div>`,
+    iconAnchor: [30, 10],
+  });
+  resultMarker = L.marker([lat, lon], { icon: rIcon }).addTo(map);
+
+  // Build events HTML
+  let eventsHtml = '';
+  if (d.nearby_events && d.nearby_events.length) {
+    eventsHtml = d.nearby_events.map(ev => `
+      <div class="event-item">
+        <div class="event-dot"></div>
+        <div class="event-info">
+          <div class="event-type">${ev.event_type}</div>
+          <div class="event-loc">${ev.location} · ${ev.event_date}</div>
+        </div>
+        <div class="event-dist">${ev.dist_km} km</div>
+      </div>`).join('');
+  } else {
+    eventsHtml = '<p style="font-size:12px;color:var(--muted);padding:8px 0">No recent events within 75 km</p>';
+  }
+
+  // Factor bars
+  const f = d.factors;
+  const maxF = 50;
+  const factorsHtml = `
+    <div class="factors-card">
+      <div class="section-title">Score Breakdown</div>
+      ${factorRow('Event Density', f.density_score, maxF)}
+      ${factorRow('Proximity', f.proximity_score, 30)}
+      ${factorRow('Regional Baseline', f.regional_baseline, 20)}
+    </div>`;
+
+  function factorRow(label, val, max) {
+    const pct = Math.min(100, (val / max) * 100);
+    return `<div class="factor-row">
+      <div class="factor-label">${label}</div>
+      <div class="factor-bar-bg"><div class="factor-bar-fill" style="width:${pct}%"></div></div>
+      <div class="factor-val">${val.toFixed(0)}</div>
+    </div>`;
+  }
+
+  const premiumUsd = d.annual_premium_usd.toLocaleString();
+  const insuredFmt = parseFloat(document.getElementById('insured_value').value).toLocaleString();
+
+  document.getElementById('results').innerHTML = `
+    <div style="padding-bottom: 16px;">
+
+      <!-- Score -->
+      <div class="score-card" style="border-color:${color}40">
+        <div class="score-header">
+          <div class="score-number" style="color:${color}">${d.risk_score}</div>
+          <div class="score-label" style="background:${bg};color:${color}">${d.risk_label} Risk</div>
+        </div>
+        <div class="score-bar">
+          <div class="score-fill" style="width:${d.risk_score}%;background:${color}"></div>
+        </div>
+        <div class="score-grid">
+          <div class="score-stat">
+            <div class="stat-label">Events (180d)</div>
+            <div class="stat-value">${d.event_count}</div>
+          </div>
+          <div class="score-stat">
+            <div class="stat-label">Nearest Event</div>
+            <div class="stat-value">${d.closest_event_km} km</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Premium -->
+      <div class="premium-card">
+        <div class="section-title" style="color:var(--accent)">Indicative Premium</div>
+        <div class="premium-main">${d.annual_premium_pct}%</div>
+        <div class="premium-sub">of insured value per year</div>
+        <div class="premium-usd">On <strong>$${insuredFmt}</strong> coverage → <span>$${premiumUsd} / year</span></div>
+      </div>
+
+      ${factorsHtml}
+
+      <!-- Trigger -->
+      <div class="trigger-card">
+        <div class="trigger-title">⚡ Parametric Trigger</div>
+        <div class="trigger-text">${d.parametric_trigger}</div>
+      </div>
+
+      <!-- Events -->
+      <div class="events-card">
+        <div class="events-title">Recent Conflict Events Nearby</div>
+        ${eventsHtml}
+      </div>
+
+      <div style="font-size:10px;color:var(--muted);margin-top:10px;text-align:center">
+        Data: ${d.data_source} · Indicative only · Not a binding quote
+      </div>
+    </div>`;
+}
+
+// Enter key triggers score
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') runScore();
+});
+</script>
+</body>
+</html>
